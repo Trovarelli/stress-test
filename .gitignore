@@ -1,0 +1,24 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/stresstest
+/stresstest.exe
+
+# Test artifacts
+*.out
+*.test
+coverage.html
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
