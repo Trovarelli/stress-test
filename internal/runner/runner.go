@@ -69,7 +69,7 @@ func NewRunner(client HTTPDoer) *Runner {
 	}
 }
 
-type jobResult struct {
+type result struct {
 	statusCode int
 	err        error
 }
@@ -109,7 +109,9 @@ func (r *Runner) Run(ctx context.Context, cfg Config) (*report.Report, error) {
 	}
 	close(jobs)
 
-	results := make(chan jobResult, cfg.Requests)
+	// Buffer sized to cfg.Requests ensures workers never block on send,
+	// even when context is cancelled and no reader is draining yet.
+	results := make(chan result, cfg.Requests)
 
 	var wg sync.WaitGroup
 	startTime := time.Now()
@@ -120,32 +122,31 @@ func (r *Runner) Run(ctx context.Context, cfg Config) (*report.Report, error) {
 		go func() {
 			defer wg.Done()
 			for range jobs {
-				select {
-				case <-ctx.Done():
+				// Check for cancellation before dispatching each request.
+				if ctx.Err() != nil {
 					return
-				default:
 				}
 
 				req, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.URL, nil)
 				if err != nil {
-					results <- jobResult{statusCode: 0, err: err}
+					results <- result{err: err}
 					continue
 				}
 
-				// Standard User-Agent header for load testing
 				req.Header.Set("User-Agent", "Go-StressTest-CLI/1.0")
 
 				resp, err := client.Do(req)
 				if err != nil {
-					results <- jobResult{statusCode: 0, err: err}
+					results <- result{err: err}
 					continue
 				}
 
-				// Consume and close response body to allow connection reuse
+				// Drain and close the body so the underlying TCP connection
+				// is returned to the pool (HTTP Keep-Alive).
 				_, _ = io.Copy(io.Discard, resp.Body)
 				_ = resp.Body.Close()
 
-				results <- jobResult{statusCode: resp.StatusCode, err: nil}
+				results <- result{statusCode: resp.StatusCode}
 			}
 		}()
 	}

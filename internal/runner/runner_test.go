@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -95,8 +96,8 @@ func TestConfig_Validate(t *testing.T) {
 				t.Fatalf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.wantErr && err != nil && tt.expectedErr != "" {
-				if !testing.Short() && !contains(err.Error(), tt.expectedErr) {
-					t.Errorf("expected error containing '%s', got '%s'", tt.expectedErr, err.Error())
+				if !strings.Contains(err.Error(), tt.expectedErr) {
+					t.Errorf("expected error containing %q, got %q", tt.expectedErr, err.Error())
 				}
 			}
 		})
@@ -260,21 +261,10 @@ func TestRunner_ContextCancellation(t *testing.T) {
 		t.Fatalf("unexpected error on context cancel: %v", err)
 	}
 
-	// Should not have completed all 50 requests
+	// The context expired, so fewer than all 50 requests should have completed.
+	// We can't assert an exact number (timing-dependent), but we can confirm the
+	// run respected the cancellation signal.
 	if rep.TotalRequests >= 50 {
 		t.Errorf("expected fewer than 50 completed requests due to cancellation, got %d", rep.TotalRequests)
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || hasSubstr(s, substr))
-}
-
-func hasSubstr(s, substr string) bool {
-	for i := 0; i+len(substr) <= len(s); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

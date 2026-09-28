@@ -65,10 +65,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	select {
-	case <-ctx.Done():
-		fmt.Println("\n[AVISO] Teste cancelado antes do término completo. Gerando métricas parciais...")
-	default:
+	// ctx.Err() is checked after Run() returns — at this point the context
+	// may already be Done if the user pressed Ctrl+C during execution.
+	if ctx.Err() != nil {
+		fmt.Println("\n[AVISO] Teste interrompido antes do término. Exibindo métricas parciais...")
 	}
 
 	rep.Render(os.Stdout)
