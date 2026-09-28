@@ -65,8 +65,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// ctx.Err() is checked after Run() returns — at this point the context
-	// may already be Done if the user pressed Ctrl+C during execution.
 	if ctx.Err() != nil {
 		fmt.Println("\n[AVISO] Teste interrompido antes do término. Exibindo métricas parciais...")
 	}

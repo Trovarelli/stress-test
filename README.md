@@ -1,90 +1,80 @@
-# Stress Test CLI
+# Desafio Técnico: Stress Test - Pós Go Expert
 
-Ferramenta de linha de comando (CLI) desenvolvida em **Go** para realizar testes de carga e estresse em serviços web.
+Projeto desenvolvido como parte dos desafios práticos da **Pós Go Expert** (Full Cycle).
 
-A ferramenta permite especificar a URL alvo, o volume total de requisições e a quantidade de chamadas simultâneas (concorrência). Ao término do processamento, um relatório detalhado e estruturado é impresso no console.
+O objetivo é implementar uma CLI em Go para realizar testes de carga em serviços web HTTP/HTTPS. A aplicação recebe a URL alvo, a quantidade total de requisições e a concorrência desejada via linha de comando, executa os disparos concorrentes e apresenta um relatório consolidado no console.
 
 ---
 
-## 📋 Requisitos e Parâmetros
-
-A aplicação aceita os seguintes parâmetros de linha de comando:
+## Parâmetros da CLI
 
 | Parâmetro | Tipo | Obrigatório | Descrição |
 | :--- | :--- | :---: | :--- |
-| `--url` | `string` | **Sim** | URL completa do serviço a ser testado (deve iniciar com `http://` ou `https://`). |
-| `--requests` | `int` | **Sim** | Quantidade total de requisições a serem realizadas (`> 0`). |
-| `--concurrency` | `int` | **Sim** | Número de chamadas simultâneas / workers concorrentes (`> 0`). |
-| `--timeout` | `duration` | Não | Tempo limite máximo por requisição HTTP (padrão: `30s`, ex: `10s`, `1m`). |
+| `--url` | string | Sim | URL do serviço a ser testado (http:// ou https://) |
+| `--requests` | int | Sim | Número total de requisições a serem realizadas |
+| `--concurrency` | int | Sim | Número de chamadas simultâneas (goroutines concorrentes) |
+| `--timeout` | duration | Não | Timeout por requisição (padrão: 30s) |
 
 ---
 
-## 🚀 Execução via Docker (Obrigatório)
+## Execução com Docker
 
-A aplicação foi empacotada em uma imagem Docker minimalista multi-stage (baseada em `scratch`), pesando apenas **~10MB** e contendo os certificados raiz de autoridade certificadora (CA) para chamadas HTTPS seguras.
+A aplicação foi estruturada em build multi-stage gerando uma imagem estática baseada em `scratch` com certificados CA instalados.
 
-### 1. Construir a Imagem Docker
-
-No diretório raiz do projeto, execute:
+### 1. Build da imagem
 
 ```bash
 docker build -t stress-test .
 ```
 
-### 2. Executar o Teste de Carga
-
-Execute o container passando os parâmetros desejados. O formato segue o padrão estipulado:
+### 2. Execução do teste
 
 ```bash
 docker run --rm stress-test --url=http://google.com --requests=1000 --concurrency=10
 ```
 
-> **Nota:** A flag `--rm` garante que o container seja removido após o término da execução.
+Outro exemplo:
 
-### Exemplos Adicionais:
-
-- **Teste com HTTPS:**
-  ```bash
-  docker run --rm stress-test --url=https://httpbin.org/get --requests=500 --concurrency=20
-  ```
-
-- **Exibir ajuda / parâmetros disponíveis:**
-  ```bash
-  docker run --rm stress-test --help
-  ```
+```bash
+docker run --rm stress-test --url=https://httpbin.org/get --requests=500 --concurrency=20
+```
 
 ---
 
-## 💻 Execução Local (sem Docker)
+## Execução Local (sem Docker)
 
-Caso prefira executar diretamente em seu ambiente Go local:
+### Requisitos
 
-### Pré-requisitos
-- [Go](https://golang.org/) 1.23 ou superior instalado.
+- Go 1.23+ instalado
 
-### 1. Executar com `go run`
+### Com `go run`
 
 ```bash
 go run ./cmd/stresstest --url=http://google.com --requests=1000 --concurrency=10
 ```
 
-### 2. Compilar o Binário
+### Compilação do binário
 
 ```bash
-# Compilar binário local
 go build -ldflags="-w -s" -o stresstest ./cmd/stresstest
-
-# Executar o binário compilado
 ./stresstest --url=http://google.com --requests=1000 --concurrency=10
 ```
 
-*(No Windows PowerShell: `.\stresstest.exe --url=http://google.com --requests=1000 --concurrency=10`)*
+*(No Windows: `.\stresstest.exe --url=http://google.com --requests=1000 --concurrency=10`)*
 
 ---
 
-## 📊 Relatório de Execução
+## Formato do Relatório
 
-Ao final do teste, o sistema consolida as métricas e exibe no console um relatório no seguinte formato:
+Ao término da execução, a CLI exibe no terminal:
+
+- Tempo total gasto na execução
+- Quantidade total de requisições executadas
+- Quantidade de requisições com status HTTP 200
+- Distribuição dos demais códigos de status HTTP (404, 500, etc.)
+- Falhas de rede ou conexão (se houver)
+
+Exemplo de saída:
 
 ```text
 ====================================================================
@@ -104,9 +94,7 @@ Ao final do teste, o sistema consolida as métricas e exibe no console um relat�
 ====================================================================
 ```
 
-### Exemplo com Códigos de Erro / Diversos:
-
-Caso o serviço retorne outros status HTTP (ex: 404, 500) ou haja erros de rede:
+Exemplo quando ocorrem status diferentes de 200:
 
 ```text
 ====================================================================
@@ -124,24 +112,22 @@ Caso o serviço retorne outros status HTTP (ex: 404, 500) ou haja erros de rede:
   Distribuição de Outros Códigos de Status HTTP:
     [HTTP 404 - Not Found]             : 20
     [HTTP 500 - Internal Server Error] : 10
---------------------------------------------------------------------
-  Falhas de Rede/Conexão         : 0
 ====================================================================
 ```
 
 ---
 
-## 🧪 Testes Automatizados
+## Testes Automatizados
 
-O projeto conta com cobertura de testes unitários e de integração, utilizando o pacote nativo `net/http/httptest` para simular servidores HTTP, cenários de concorrência, respostas com códigos HTTP variados e cancelamentos graciosos via `context.Context`.
+Os testes cobrem validações de configuração, garantia da contagem exata de requisições, cenários de alta concorrência com servidores mock (`httptest`), distribuição de status codes e cancelamento por contexto.
 
-Para executar a suíte completa de testes:
+Para rodar todos os testes:
 
 ```bash
 go test -v ./...
 ```
 
-Verificar a cobertura de testes:
+Para verificar a cobertura:
 
 ```bash
 go test -cover ./...
@@ -149,32 +135,30 @@ go test -cover ./...
 
 ---
 
-## 🏗️ Arquitetura e Decisões de Projeto
-
-O projeto foi estruturado seguindo as melhores práticas e convenções da comunidade Go:
+## Estrutura do Projeto
 
 ```text
 stress-test/
 ├── cmd/
 │   └── stresstest/
-│       └── main.go           # Ponto de entrada da CLI, parsing de flags e tratamento de sinais
+│       └── main.go          # CLI: parsing de flags, validação e tratamento de sinais
 ├── internal/
 │   ├── runner/
-│   │   ├── runner.go         # Orquestração do Worker Pool e disparo concorrente das requisições
-│   │   └── runner_test.go    # Testes unitários do runner com servidores mock httptest
+│   │   ├── runner.go        # Worker pool, controle de concorrência e cliente HTTP
+│   │   └── runner_test.go   # Testes unitários do runner
 │   └── report/
-│       ├── report.go         # Agregação das métricas e formatação do relatório para o console
-│       └── report_test.go    # Testes unitários do relatório
-├── .dockerignore             # Arquivos ignorados pelo build Docker
-├── .gitignore                # Arquivos ignorados pelo Git
-├── Dockerfile                # Configuração multi-stage para construção da imagem
-├── go.mod                    # Definição do módulo Go
-└── README.md                 # Documentação detalhada
+│       ├── report.go        # Agregação de resultados e formatação do relatório
+│       └── report_test.go   # Testes unitários do relatório
+├── .dockerignore
+├── .gitignore
+├── Dockerfile
+├── go.mod
+└── README.md
 ```
 
-### Destaques Técnicos:
-1. **Worker Pool Pattern**: As requisições são enfileiradas através de canais (`chan struct{}`) e consumidas por um grupo de goroutines de tamanho fixo determinado pelo parâmetro `--concurrency`.
-2. **Garantia de Quantidade Exata**: O canal de tarefas contém exatamente o número especificado em `--requests`, garantindo que nenhuma requisição a mais ou a menos seja disparada.
-3. **Otimização do `http.Transport`**: O `http.Client` padrão do Go possui limite de conexões ociosas por host (`MaxIdleConnsPerHost = 2`), o que geraria gargalos severos de socket em testes de alta concorrência. O runner configura um transporte otimizado com `MaxIdleConns` e `MaxIdleConnsPerHost` dimensionados para a concorrência solicitada, além de garantir o esgotamento (`io.Copy(io.Discard, resp.Body)`) e fechamento do body da resposta para reutilização eficiente das conexões TCP (HTTP Keep-Alive).
-4. **Encerramento Gracioso (Graceful Shutdown)**: O sistema escuta sinais do sistema operacional (`SIGINT`, `SIGTERM`). Se o usuário pressionar `Ctrl+C`, os workers interrompem novas requisições de forma limpa e um relatório parcial é gerado imediatamente.
-5. **Zero Dependências Externas**: Implementado integralmente com a biblioteca padrão do Go (`net/http`, `sync`, `flag`, `time`, `context`), proporcionando binários ultrarrápidos, leves e livres de vulnerabilidades de dependências terceiras.
+### Detalhes de Implementação
+
+- **Worker Pool:** O runner utiliza um canal de tarefas com buffer igual ao número total de requisições (`--requests`). Um pool de goroutines de tamanho fixo definido por `--concurrency` consome as tarefas em paralelo.
+- **Conexões HTTP:** Configuração customizada de `http.Transport` com `MaxIdleConns` e `MaxIdleConnsPerHost` adequados ao nível de concorrência, além do consumo completo e fechamento de `resp.Body` para reutilização de conexões TCP (Keep-Alive).
+- **Graceful Shutdown:** Interrupção controlada via `signal.NotifyContext` (`SIGINT` / `SIGTERM`), permitindo a geração de relatório parcial caso o teste seja cancelado antes do término.
+- **Sem dependências externas:** O projeto utiliza apenas os pacotes da biblioteca padrão do Go.

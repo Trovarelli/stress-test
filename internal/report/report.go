@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// Report holds the aggregated metrics of the stress test execution.
 type Report struct {
 	URL              string
 	TargetRequests   int
@@ -21,7 +20,6 @@ type Report struct {
 	NetworkErrors    int
 }
 
-// NewReport creates an initialized Report instance.
 func NewReport(url string, targetRequests, concurrency int) *Report {
 	return &Report{
 		URL:              url,
@@ -31,7 +29,6 @@ func NewReport(url string, targetRequests, concurrency int) *Report {
 	}
 }
 
-// RecordResult records a single request outcome.
 func (r *Report) RecordResult(statusCode int, err error) {
 	r.TotalRequests++
 	if err != nil {
@@ -46,7 +43,6 @@ func (r *Report) RecordResult(statusCode int, err error) {
 	}
 }
 
-// Render writes the formatted report to the provided io.Writer.
 func (r *Report) Render(w io.Writer) {
 	border := strings.Repeat("=", 68)
 	divider := strings.Repeat("-", 68)
@@ -74,7 +70,6 @@ func (r *Report) Render(w io.Writer) {
 	if len(r.OtherStatusCodes) == 0 {
 		fmt.Fprintln(w, "    Nenhum outro código HTTP retornado.")
 	} else {
-		// Sort status codes in ascending order
 		keys := make([]int, 0, len(r.OtherStatusCodes))
 		for code := range r.OtherStatusCodes {
 			keys = append(keys, code)

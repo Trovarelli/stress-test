@@ -170,11 +170,11 @@ func TestRunner_MixedStatusCodes(t *testing.T) {
 		idx := atomic.AddInt64(&count, 1)
 		val := (idx - 1) % 10
 		switch {
-		case val < 6: // 60% 200 (val 0, 1, 2, 3, 4, 5)
+		case val < 6:
 			w.WriteHeader(http.StatusOK)
-		case val < 8: // 20% 404 (val 6, 7)
+		case val < 8:
 			w.WriteHeader(http.StatusNotFound)
-		default: // 20% 500 (val 8, 9)
+		default:
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}))
@@ -214,7 +214,6 @@ func TestRunner_MixedStatusCodes(t *testing.T) {
 }
 
 func TestRunner_NetworkErrors(t *testing.T) {
-	// Create server and close it immediately to force network errors
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	serverURL := server.URL
 	server.Close()
@@ -261,9 +260,6 @@ func TestRunner_ContextCancellation(t *testing.T) {
 		t.Fatalf("unexpected error on context cancel: %v", err)
 	}
 
-	// The context expired, so fewer than all 50 requests should have completed.
-	// We can't assert an exact number (timing-dependent), but we can confirm the
-	// run respected the cancellation signal.
 	if rep.TotalRequests >= 50 {
 		t.Errorf("expected fewer than 50 completed requests due to cancellation, got %d", rep.TotalRequests)
 	}

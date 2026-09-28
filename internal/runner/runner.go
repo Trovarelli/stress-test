@@ -14,12 +14,10 @@ import (
 	"github.com/jtnet/stress-test/internal/report"
 )
 
-// HTTPDoer defines the interface for executing HTTP requests.
 type HTTPDoer interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// Config holds the configuration for the stress test execution.
 type Config struct {
 	URL         string
 	Requests    int
@@ -27,7 +25,6 @@ type Config struct {
 	Timeout     time.Duration
 }
 
-// Validate validates the configuration parameters.
 func (c *Config) Validate() error {
 	if c.URL == "" {
 		return errors.New("a URL do serviço (--url) é obrigatória")
@@ -57,12 +54,10 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// Runner orchestrates the load testing workers.
 type Runner struct {
 	client HTTPDoer
 }
 
-// NewRunner creates a new Runner with an optional custom HTTPDoer.
 func NewRunner(client HTTPDoer) *Runner {
 	return &Runner{
 		client: client,
@@ -74,7 +69,6 @@ type result struct {
 	err        error
 }
 
-// Run executes the stress test according to the given Config and returns a detailed Report.
 func (r *Runner) Run(ctx context.Context, cfg Config) (*report.Report, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -109,20 +103,16 @@ func (r *Runner) Run(ctx context.Context, cfg Config) (*report.Report, error) {
 	}
 	close(jobs)
 
-	// Buffer sized to cfg.Requests ensures workers never block on send,
-	// even when context is cancelled and no reader is draining yet.
 	results := make(chan result, cfg.Requests)
 
 	var wg sync.WaitGroup
 	startTime := time.Now()
 
-	// Launch worker pool
 	for i := 0; i < cfg.Concurrency; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for range jobs {
-				// Check for cancellation before dispatching each request.
 				if ctx.Err() != nil {
 					return
 				}
@@ -141,8 +131,6 @@ func (r *Runner) Run(ctx context.Context, cfg Config) (*report.Report, error) {
 					continue
 				}
 
-				// Drain and close the body so the underlying TCP connection
-				// is returned to the pool (HTTP Keep-Alive).
 				_, _ = io.Copy(io.Discard, resp.Body)
 				_ = resp.Body.Close()
 
@@ -151,13 +139,11 @@ func (r *Runner) Run(ctx context.Context, cfg Config) (*report.Report, error) {
 		}()
 	}
 
-	// Close results channel once all workers finish
 	go func() {
 		wg.Wait()
 		close(results)
 	}()
 
-	// Aggregate results
 	for res := range results {
 		rep.RecordResult(res.statusCode, res.err)
 	}

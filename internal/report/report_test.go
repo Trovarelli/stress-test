@@ -15,22 +15,18 @@ func TestReport_RecordResult_And_Render(t *testing.T) {
 	rep := report.NewReport("http://example.com", 100, 10)
 	rep.TotalDuration = 1500 * time.Millisecond
 
-	// Record 80 OKs
 	for i := 0; i < 80; i++ {
 		rep.RecordResult(http.StatusOK, nil)
 	}
 
-	// Record 15 404s
 	for i := 0; i < 15; i++ {
 		rep.RecordResult(http.StatusNotFound, nil)
 	}
 
-	// Record 3 500s
 	for i := 0; i < 3; i++ {
 		rep.RecordResult(http.StatusInternalServerError, nil)
 	}
 
-	// Record 2 Network Errors
 	for i := 0; i < 2; i++ {
 		rep.RecordResult(0, errors.New("connection reset"))
 	}
@@ -39,7 +35,6 @@ func TestReport_RecordResult_And_Render(t *testing.T) {
 	rep.Render(&buf)
 	output := buf.String()
 
-	// Assertions on required fields
 	if !strings.Contains(output, "http://example.com") {
 		t.Errorf("expected output to contain URL, got:\n%s", output)
 	}
